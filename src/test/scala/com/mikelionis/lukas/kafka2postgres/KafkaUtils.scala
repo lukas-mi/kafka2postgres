@@ -4,7 +4,6 @@ import org.apache.kafka.clients.admin.{AdminClient, AdminClientConfig, NewTopic}
 import org.apache.kafka.clients.consumer.{ConsumerConfig, KafkaConsumer}
 import org.apache.kafka.clients.producer.{KafkaProducer, ProducerConfig}
 import org.apache.kafka.common.serialization.{ByteBufferDeserializer, ByteBufferSerializer, StringDeserializer, StringSerializer}
-import org.scalatest.BeforeAndAfterAll
 import org.testcontainers.containers.KafkaContainer
 
 import java.nio.ByteBuffer

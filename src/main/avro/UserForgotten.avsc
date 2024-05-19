@@ -1,6 +1,6 @@
 {
   "type": "record",
-  "name": "UserForgetten",
+  "name": "UserForgotten",
   "namespace": "com.messages.events.user",
   "fields": [
     {

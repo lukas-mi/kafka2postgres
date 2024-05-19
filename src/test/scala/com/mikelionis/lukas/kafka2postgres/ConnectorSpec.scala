@@ -7,17 +7,47 @@ import java.time.Duration
 import scala.jdk.CollectionConverters._
 import scala.util.Using
 
-class ConnectorSpec extends SpecWrapper with should.Matchers {
+class ConnectorSpec extends ConnectorSpecWrapper with should.Matchers {
+  classOf[Connector].getSimpleName should "insert a user data after consuming UserCreated event" in {
+    val srcTopic = "user-events-test"
+    val trgTable = "users_test"
+
+    createTopic(srcTopic)
+    createUsersTable(trgTable)
+    Thread.sleep(500) // ensure table exists
+
+    val connector = newConnector(srcTopic, trgTable)
+
+    new Thread(
+      () => connector.run(),
+      "connector-starter-in-spec"
+    ).start()
+
+    val userId = "user1"
+    val userName = "username1"
+    val userEmail = "user1@mail.com"
+    Using.resource(newProducer()) { producer =>
+      producer.send(newUserCreatedRecord(srcTopic, userId, userName, userEmail))
+    }
+
+    eventually {
+      val users = selectUsers(trgTable)
+
+      users.size shouldBe 1
+    }
+
+    connector.stop()
+  }
+
   it should "run the test" in {
     val topic = "test-topic"
-    val gen = new EventGenerator(topic)
 
     createTopic(topic)
 
     val userId = "user1"
     val userName = "username1"
     val userEmail = "user1@mail.com"
-    val producerRecord = gen.newUserCreatedRecord(userId, userName, userEmail)
+    val producerRecord = newUserCreatedRecord(topic, userId, userName, userEmail)
 
     Using.resources(newProducer(), newConsumer()) { (producer, consumer) =>
       consumer.subscribe(List(topic).asJava)
@@ -35,12 +65,6 @@ class ConnectorSpec extends SpecWrapper with should.Matchers {
         headers.foreach(header => println(s"${header.key()}=${new String(header.value())}"))
       }
     }
-
-
-    // TODO: create topic
-    // TODO: write/read from topic
-    // TODO: query to postgres
-
 
     Some(1) shouldBe Some(1)
   }

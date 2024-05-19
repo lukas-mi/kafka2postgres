@@ -8,7 +8,7 @@ import org.apache.kafka.common.header.internals.RecordHeader
 import java.nio.ByteBuffer
 import scala.jdk.CollectionConverters._
 
-trait EventHelper {
+trait EventGenHelper {
   val srcSchemaHeaderName = "name"
 
   def newUserCreatedRecord(topic: String, id: String, name: String, email: String): ProducerRecord[String, ByteBuffer] = {
