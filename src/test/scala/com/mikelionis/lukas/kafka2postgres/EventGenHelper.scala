@@ -6,12 +6,12 @@ import org.apache.kafka.common.header.Header
 import org.apache.kafka.common.header.internals.RecordHeader
 
 import java.nio.ByteBuffer
-import java.util
 import scala.jdk.CollectionConverters._
 
-class EventGenerator(topic: String) {
+trait EventHelper {
+  val srcSchemaHeaderName = "name"
 
-  def newUserCreatedRecord(id: String, name: String, email: String): ProducerRecord[String, ByteBuffer] = {
+  def newUserCreatedRecord(topic: String, id: String, name: String, email: String): ProducerRecord[String, ByteBuffer] = {
     new ProducerRecord[String, ByteBuffer](
       topic,
       null,
@@ -24,7 +24,7 @@ class EventGenerator(topic: String) {
           .setEmail(email)
           .build()
       ),
-      List[Header](new RecordHeader("name", classOf[UserCreated].getSimpleName.getBytes)).asJava
+      List[Header](new RecordHeader(srcSchemaHeaderName, classOf[UserCreated].getSimpleName.getBytes)).asJava
     )
   }
 

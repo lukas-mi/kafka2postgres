@@ -1,5 +1,6 @@
 package com.mikelionis.lukas.kafka2postgres
 
+import com.typesafe.config.ConfigFactory
 import org.apache.kafka.clients.admin.AdminClient
 import org.scalatest.BeforeAndAfterAll
 import org.scalatest.concurrent.Eventually
@@ -41,5 +42,34 @@ abstract class SpecWrapper extends AnyFlatSpec with BeforeAndAfterAll with Event
     postgres.stop()
     network.close()
     super.afterAll()
+  }
+
+  def newConnector(srcTopic: String, trgTable: String): Connector = {
+    if (kafka.isRunning && postgres.isRunning) {
+      val config = ConfigFactory.parseString(
+        s"""
+          |kafka {
+          |  bootstrap.servers = ${kafka.getBootstrapServers}
+          |  group.id = "kafka2postgres-user-events-test"
+          |  auto.offset.reset = "earliest"
+          |}
+          |
+          |postgres {
+          |  url = ${postgres.getJdbcUrl}
+          |  user = ${postgres.getUsername}
+          |  password = ${postgres.getPassword}
+          |}
+          |
+          |connector {
+          |  src.topic = $srcTopic
+          |  src.schema.header = name
+          |  trg.table = $trgTable
+          |}
+          |""".stripMargin
+      )
+      new Connector(config)
+    } else {
+      throw new Exception("Cannot create a connector, kafka and/or postgres is/are not running")
+    }
   }
 }
