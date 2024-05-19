@@ -55,7 +55,7 @@ abstract class ConnectorSpecWrapper extends AnyFlatSpec
     super.afterAll()
   }
 
-  def newConnector(srcTopic: String, trgTable: String): Connector = {
+  def newConnector(srcTopic: String, usersTable: String, forgottenUsersTable: String): Connector = {
     if (kafka.isRunning && postgres.isRunning) {
       val config = ConfigFactory.parseString(
         s"""
@@ -74,7 +74,8 @@ abstract class ConnectorSpecWrapper extends AnyFlatSpec
           |connector {
           |  src.topic = $srcTopic
           |  src.schema.header = $srcSchemaHeaderName
-          |  trg.table = $trgTable
+          |  trg.table.users = $usersTable
+          |  trg.table.forgotten = $forgottenUsersTable
           |}
           |""".stripMargin
       )

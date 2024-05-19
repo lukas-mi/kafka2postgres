@@ -10,13 +10,13 @@ import scala.util.Using
 class ConnectorSpec extends ConnectorSpecWrapper with should.Matchers {
   classOf[Connector].getSimpleName should "insert a user data after consuming UserCreated event" in {
     val srcTopic = "user-events-test"
-    val trgTable = "users_test"
+    val usersTable = "users_test"
+    val forgottenUsersTable = "forgotten_test"
 
     createTopic(srcTopic)
-    createUsersTable(trgTable)
-    Thread.sleep(500) // ensure table exists
+    createPostgresTables(usersTable, forgottenUsersTable)
 
-    val connector = newConnector(srcTopic, trgTable)
+    val connector = newConnector(srcTopic, usersTable, forgottenUsersTable)
 
     new Thread(
       () => connector.run(),
@@ -31,7 +31,7 @@ class ConnectorSpec extends ConnectorSpecWrapper with should.Matchers {
     }
 
     eventually {
-      val users = selectUsers(trgTable)
+      val users = selectUsers(usersTable)
 
       users.size shouldBe 1
     }

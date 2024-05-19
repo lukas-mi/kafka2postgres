@@ -13,7 +13,8 @@ trait PostgresUtils {
   protected val postgres: PostgreSQLContainer[Nothing]
   protected var postgresCon: Connection
 
-  protected val usersTableDef: String = Using.resource(Source.fromFile("src/main/sql/users.sql"))(_.getLines().mkString("\n"))
+  protected val usersTableDef: String = getSQLQuery("src/main/sql/users.sql")
+  protected val forgottenUsersTableDef: String = getSQLQuery("src/main/sql/forgotten_users.sql")
 
   def newPostgresConnection(): Connection = {
     DriverManager.getConnection(
@@ -23,14 +24,19 @@ trait PostgresUtils {
     )
   }
 
-  def createUsersTable(table: String): Unit = {
-    Using(postgresCon.createStatement())(_.execute(usersTableDef.replace("users", table)))
+  def createPostgresTables(usersTable: String, forgottenUsersTable: String): Unit = {
+    Using(postgresCon.createStatement())(_.execute(usersTableDef.replace("users", usersTable)))
+    Using(postgresCon.createStatement())(_.execute(forgottenUsersTableDef.replace("forgotten_users", forgottenUsersTable)))
+
+    // ensure tables exists before doing anything else in tests
+    Using(postgresCon.createStatement())(_.execute(s"SELECT 1 FROM $usersTable;"))
+    Using(postgresCon.createStatement())(_.execute(s"SELECT 1 FROM $forgottenUsersTable"))
   }
 
   def selectUsers(table: String): List[User] = {
     val buffer = ListBuffer.empty[User]
     Using(postgresCon.createStatement()) { stmt =>
-      Using(stmt.executeQuery(s"SELECT id, name, email, created_at, updated_at, status FROM $table")) { rs =>
+      Using(stmt.executeQuery(s"SELECT id, name, email, created_at, updated_at, status FROM $table;")) { rs =>
         while (rs.next()) {
           buffer.addOne(
             User(
@@ -47,4 +53,6 @@ trait PostgresUtils {
     }
     buffer.toList
   }
+
+  def getSQLQuery(path: String): String = Using.resource(Source.fromFile(path))(_.getLines().mkString("\n"))
 }
