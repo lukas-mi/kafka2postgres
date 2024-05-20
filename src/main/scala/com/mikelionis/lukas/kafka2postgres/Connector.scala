@@ -1,7 +1,7 @@
 package com.mikelionis.lukas.kafka2postgres
 
 import com.messages.events.user.{UserCreated, UserDeleted, UserEmailUpdated, UserForgotten}
-import com.mikelionis.lukas.kafka2postgres.util.Logging
+import com.mikelionis.lukas.kafka2postgres.util.{Logging, PostgresErrorCodes}
 import com.typesafe.config.Config
 import org.apache.kafka.clients.consumer.{ConsumerConfig, ConsumerRecord, KafkaConsumer}
 import org.apache.kafka.common.serialization.{ByteBufferDeserializer, StringDeserializer}
@@ -125,7 +125,7 @@ class Connector(config: Config) extends Logging {
   }
 
   private def updateUserEmail(con: Connection)(event: UserEmailUpdated): Unit = {
-    val query = s"UPDATE $usersTable SET email = ? WHERE id = ?;"
+    val query = s"UPDATE $usersTable SET email = ? AND updated_at = CURRENT_TIMESTAMP WHERE id = ?;"
     Using.resource(con.prepareStatement(query)) { stmt =>
       stmt.setString(1, event.email.toString)
       stmt.setString(2, event.id.toString)
@@ -141,7 +141,7 @@ class Connector(config: Config) extends Logging {
   }
 
   private def updateUserStatus(con: Connection)(event: UserDeleted): Unit = {
-    val query = s"UPDATE $usersTable SET status = ? WHERE id = ?;"
+    val query = s"UPDATE $usersTable SET status = ? AND updated_at = CURRENT_TIMESTAMP WHERE id = ?;"
     Using.resource(con.prepareStatement(query)) { stmt =>
       stmt.setString(1, UserStatus.Deleted.toString)
       stmt.setString(2, event.id.toString)
@@ -164,13 +164,15 @@ class Connector(config: Config) extends Logging {
       if (deletedRows == 0) log.warn(s"Attempted to delete a non-existing user under id '${event.id}' in $usersTable")
 
       insertStmt = con.prepareStatement(insertQuery)
-      insertStmt.executeUpdate()
+      try insertStmt.executeUpdate()
+      catch {
+        case ex: SQLException if ex.getErrorCode == PostgresErrorCodes.UniqueViolation =>
+          log.warn(s"Postgres exception while inserting user under id '${event.id}' in $forgottenUsersTable", ex)
+      }
 
       con.commit()
     } catch {
-      case ex: SQLException if ex.getErrorCode == PostgresErrorCodes.UniqueViolation =>
-        log.warn(s"Postgres exception while inserting user under id '${event.id}' in $forgottenUsersTable", ex)
-      case ex =>
+      case ex: Throwable =>
         con.rollback()
         throw ex
     } finally {
