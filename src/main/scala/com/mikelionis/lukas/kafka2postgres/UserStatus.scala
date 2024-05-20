@@ -1,8 +1,6 @@
 package com.mikelionis.lukas.kafka2postgres
 
-sealed trait UserStatus {
-  override def toString: String = super.toString.toUpperCase
-}
+sealed trait UserStatus
 
 object UserStatus {
   case object Active extends UserStatus
@@ -14,4 +12,6 @@ object UserStatus {
       case "DELETED" => Some(Deleted)
       case _ => None
     }
+
+  def toString(status: UserStatus): String = status.toString.toUpperCase
 }

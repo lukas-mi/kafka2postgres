@@ -13,6 +13,7 @@ import scala.jdk.CollectionConverters._
 trait KafkaUtils {
   protected val kafka: KafkaContainer
   protected var kafkaAdmin: AdminClient
+  protected var kafkaProducer: KafkaProducer[String, ByteBuffer]
 
   def createTopic(topic: String): Unit = {
     kafkaAdmin.createTopics(List(new NewTopic(topic, 1, 1.asInstanceOf[Short])).asJava)

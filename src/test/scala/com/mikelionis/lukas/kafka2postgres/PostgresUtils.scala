@@ -9,6 +9,7 @@ import scala.util.Using
 
 trait PostgresUtils {
   case class User(id: String, name: String, email: String, createdAt: Timestamp, updateAt: Timestamp, status: String)
+  case class ForgottenUser(id: String, forgottenAt: Timestamp)
 
   protected val postgres: PostgreSQLContainer[Nothing]
   protected var postgresCon: Connection
@@ -46,6 +47,23 @@ trait PostgresUtils {
               rs.getTimestamp("created_at"),
               rs.getTimestamp("updated_at"),
               rs.getString("status")
+            )
+          )
+        }
+      }
+    }
+    buffer.toList
+  }
+
+  def selectForgottenUsers(table: String): List[ForgottenUser] = {
+    val buffer = ListBuffer.empty[ForgottenUser]
+    Using(postgresCon.createStatement()) { stmt =>
+      Using(stmt.executeQuery(s"SELECT id, forgotten_at FROM $table;")) { rs =>
+        while (rs.next()) {
+          buffer.addOne(
+            ForgottenUser(
+              rs.getString("id"),
+              rs.getTimestamp("forgotten_at")
             )
           )
         }

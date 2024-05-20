@@ -125,7 +125,7 @@ class Connector(config: Config) extends Logging {
   }
 
   private def updateUserEmail(con: Connection)(event: UserEmailUpdated): Unit = {
-    val query = s"UPDATE $usersTable SET email = ? AND updated_at = CURRENT_TIMESTAMP WHERE id = ?;"
+    val query = s"UPDATE $usersTable SET email = ?, updated_at = CURRENT_TIMESTAMP WHERE id = ?;"
     Using.resource(con.prepareStatement(query)) { stmt =>
       stmt.setString(1, event.email.toString)
       stmt.setString(2, event.id.toString)
@@ -141,9 +141,9 @@ class Connector(config: Config) extends Logging {
   }
 
   private def updateUserStatus(con: Connection)(event: UserDeleted): Unit = {
-    val query = s"UPDATE $usersTable SET status = ? AND updated_at = CURRENT_TIMESTAMP WHERE id = ?;"
+    val query = s"UPDATE $usersTable SET status = ?, updated_at = CURRENT_TIMESTAMP WHERE id = ?;"
     Using.resource(con.prepareStatement(query)) { stmt =>
-      stmt.setString(1, UserStatus.Deleted.toString)
+      stmt.setString(1, UserStatus.toString(UserStatus.Deleted))
       stmt.setString(2, event.id.toString)
       val updatedRows = stmt.executeUpdate()
       if (updatedRows == 0) log.warn(s"Attempted to mark deleted a non-existing user under id '${event.id}' in $usersTable")
@@ -160,10 +160,12 @@ class Connector(config: Config) extends Logging {
     var insertStmt: PreparedStatement = null
     try {
       deleteStmt = con.prepareStatement(deleteQuery)
+      deleteStmt.setString(1, event.id.toString)
       val deletedRows = deleteStmt.executeUpdate()
       if (deletedRows == 0) log.warn(s"Attempted to delete a non-existing user under id '${event.id}' in $usersTable")
 
       insertStmt = con.prepareStatement(insertQuery)
+      insertStmt.setString(1, event.id.toString)
       try insertStmt.executeUpdate()
       catch {
         case ex: SQLException if ex.getErrorCode == PostgresErrorCodes.UniqueViolation =>
