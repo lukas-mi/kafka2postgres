@@ -12,6 +12,10 @@ POC service aggregating and loading user events (create, update, delete, forget)
 ## Run integration tests
 - `sbt test`
 
+## Schemas
+- [AVRO](src/main/avro)
+- [Postgres](src/main/sql)
+
 ## Implementation details
 - **kafka2postgres** consumes events from Kafka and performs CRUD operations to Postgres tables `users` and `users_forgotten`
   - Consumer offsets are committed manually once all events are applied to the DB
