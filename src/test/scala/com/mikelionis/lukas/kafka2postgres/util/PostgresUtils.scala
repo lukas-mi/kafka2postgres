@@ -37,6 +37,11 @@ trait PostgresUtils {
     Using(postgresCon.createStatement())(_.execute(s"SELECT 1 FROM $forgottenUsersTable"))
   }
 
+  def dropPostgresTables(usersTable: String, forgottenUsersTable: String): Unit = {
+    Using(postgresCon.createStatement())(_.execute(s"DROP TABLE IF EXISTS $usersTable;"))
+    Using(postgresCon.createStatement())(_.execute(s"DROP TABLE IF EXISTS $forgottenUsersTable"))
+  }
+
   def selectUsers(table: String): List[User] = {
     val buffer = ListBuffer.empty[User]
     Using(postgresCon.createStatement()) { stmt =>

@@ -8,7 +8,7 @@ import org.apache.kafka.common.serialization.{ByteBufferDeserializer, StringDese
 import org.postgresql.util.PSQLException
 
 import java.nio.ByteBuffer
-import java.sql.{Connection, DriverManager, PreparedStatement, SQLException}
+import java.sql.{Connection, DriverManager, PreparedStatement}
 import java.time.Duration
 import java.util.Properties
 import java.util.concurrent.atomic.AtomicBoolean

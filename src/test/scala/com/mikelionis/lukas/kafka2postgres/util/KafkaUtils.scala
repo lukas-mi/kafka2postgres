@@ -22,6 +22,10 @@ trait KafkaUtils {
     kafkaAdmin.createTopics(List(new NewTopic(topic, 1, 1.asInstanceOf[Short])).asJava)
   }
 
+  def deleteTopic(topic: String): Unit = {
+    kafkaAdmin.deleteTopics(List(topic).asJava)
+  }
+
   def newAdmin(): AdminClient = {
     val props = new Properties()
     props.put(AdminClientConfig.BOOTSTRAP_SERVERS_CONFIG, kafka.getBootstrapServers)

@@ -1,11 +1,10 @@
 package com.mikelionis.lukas.kafka2postgres
 
 import com.mikelionis.lukas.kafka2postgres.util._
-
 import com.typesafe.config.ConfigFactory
 import org.apache.kafka.clients.admin.AdminClient
 import org.apache.kafka.clients.producer.KafkaProducer
-import org.scalatest.{Assertion, BeforeAndAfterAll}
+import org.scalatest.{Assertion, BeforeAndAfterAll, BeforeAndAfterEach}
 import org.scalatest.concurrent.Eventually
 import org.scalatest.flatspec.AnyFlatSpec
 import org.scalatest.matchers.should
@@ -19,6 +18,7 @@ import java.time.Duration
 abstract class ConnectorSpecWrapper extends AnyFlatSpec
   with should.Matchers
   with BeforeAndAfterAll
+  with BeforeAndAfterEach
   with Eventually
   with KafkaUtils
   with PostgresUtils
@@ -40,6 +40,10 @@ abstract class ConnectorSpecWrapper extends AnyFlatSpec
   override val postgres: PostgreSQLContainer[Nothing] = new PostgreSQLContainer(postgresImage)
   override var postgresCon: Connection = _
 
+  protected val srcTopic = s"user-events-test"
+  protected val usersTable = s"users_test"
+  protected val forgottenUsersTable = s"forgotten_test"
+
   override def beforeAll(): Unit = {
     super.beforeAll()
     kafka.start()
@@ -47,6 +51,20 @@ abstract class ConnectorSpecWrapper extends AnyFlatSpec
     kafkaAdmin = newAdmin()
     kafkaProducer = newProducer()
     postgresCon = newPostgresConnection()
+  }
+
+  override def beforeEach(): Unit = {
+    super.beforeEach()
+    createTopic(srcTopic)
+    createPostgresTables(usersTable, forgottenUsersTable)
+    Thread.sleep(200) // TODO: inspect if necessary
+  }
+
+  override def afterEach(): Unit = {
+    super.beforeEach()
+    deleteTopic(srcTopic)
+    dropPostgresTables(usersTable, forgottenUsersTable)
+    Thread.sleep(200) // TODO: inspect if necessary
   }
 
   override def afterAll(): Unit = {
@@ -89,8 +107,7 @@ abstract class ConnectorSpecWrapper extends AnyFlatSpec
     }
   }
 
-  def withConnector(srcTopic: String, usersTable: String, forgottenUsersTable: String)
-                   (code: => Assertion): Assertion = {
+  def withConnector(code: => Assertion): Assertion = {
     val connector = newConnector(srcTopic, usersTable, forgottenUsersTable)
     new Thread(
       () => connector.run(),
