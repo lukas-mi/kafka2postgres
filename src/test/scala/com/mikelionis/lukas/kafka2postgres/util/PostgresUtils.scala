@@ -1,6 +1,7 @@
-package com.mikelionis.lukas.kafka2postgres
+package com.mikelionis.lukas.kafka2postgres.util
 
 import org.testcontainers.containers.PostgreSQLContainer
+import org.testcontainers.utility.DockerImageName
 
 import java.sql.{Connection, DriverManager, Timestamp}
 import scala.collection.mutable.ListBuffer
@@ -10,6 +11,8 @@ import scala.util.Using
 trait PostgresUtils {
   case class User(id: String, name: String, email: String, createdAt: Timestamp, updateAt: Timestamp, status: String)
   case class ForgottenUser(id: String, forgottenAt: Timestamp)
+
+  val postgresImage: DockerImageName = DockerImageName.parse("postgres:13.15")
 
   protected val postgres: PostgreSQLContainer[Nothing]
   protected var postgresCon: Connection

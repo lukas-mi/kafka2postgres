@@ -1,5 +1,7 @@
 package com.mikelionis.lukas.kafka2postgres
 
+import com.mikelionis.lukas.kafka2postgres.util._
+
 import com.typesafe.config.ConfigFactory
 import org.apache.kafka.clients.admin.AdminClient
 import org.apache.kafka.clients.producer.KafkaProducer
@@ -9,7 +11,6 @@ import org.scalatest.flatspec.AnyFlatSpec
 import org.scalatest.matchers.should
 import org.scalatest.time.{Milliseconds, Seconds, Span}
 import org.testcontainers.containers.{KafkaContainer, Network, PostgreSQLContainer}
-import org.testcontainers.utility.DockerImageName
 
 import java.nio.ByteBuffer
 import java.sql.Connection
@@ -30,13 +31,13 @@ abstract class ConnectorSpecWrapper extends AnyFlatSpec
 
   private val network = Network.newNetwork()
 
-  override val kafka: KafkaContainer = new KafkaContainer(DockerImageName.parse("confluentinc/cp-kafka:7.6.1"))
+  override val kafka: KafkaContainer = new KafkaContainer(kafkaImage)
     .withNetwork(network)
     .withStartupTimeout(Duration.ofSeconds(60))
   override var kafkaAdmin: AdminClient = _
   override var kafkaProducer: KafkaProducer[String, ByteBuffer] = _
 
-  override val postgres: PostgreSQLContainer[Nothing] = new PostgreSQLContainer(DockerImageName.parse("postgres:13.15"))
+  override val postgres: PostgreSQLContainer[Nothing] = new PostgreSQLContainer(postgresImage)
   override var postgresCon: Connection = _
 
   override def beforeAll(): Unit = {

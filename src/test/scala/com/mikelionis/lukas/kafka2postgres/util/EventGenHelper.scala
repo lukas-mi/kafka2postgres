@@ -1,4 +1,4 @@
-package com.mikelionis.lukas.kafka2postgres
+package com.mikelionis.lukas.kafka2postgres.util
 
 import com.messages.events.user._
 import org.apache.kafka.clients.producer.ProducerRecord

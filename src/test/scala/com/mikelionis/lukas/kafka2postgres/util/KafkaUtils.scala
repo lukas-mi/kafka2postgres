@@ -1,16 +1,19 @@
-package com.mikelionis.lukas.kafka2postgres
+package com.mikelionis.lukas.kafka2postgres.util
 
 import org.apache.kafka.clients.admin.{AdminClient, AdminClientConfig, NewTopic}
 import org.apache.kafka.clients.consumer.{ConsumerConfig, KafkaConsumer}
 import org.apache.kafka.clients.producer.{KafkaProducer, ProducerConfig}
 import org.apache.kafka.common.serialization.{ByteBufferDeserializer, ByteBufferSerializer, StringDeserializer, StringSerializer}
 import org.testcontainers.containers.KafkaContainer
+import org.testcontainers.utility.DockerImageName
 
 import java.nio.ByteBuffer
 import java.util.Properties
 import scala.jdk.CollectionConverters._
 
 trait KafkaUtils {
+  val kafkaImage: DockerImageName = DockerImageName.parse("confluentinc/cp-kafka:7.6.1")
+
   protected val kafka: KafkaContainer
   protected var kafkaAdmin: AdminClient
   protected var kafkaProducer: KafkaProducer[String, ByteBuffer]
@@ -42,5 +45,4 @@ trait KafkaUtils {
     props.put(ProducerConfig.VALUE_SERIALIZER_CLASS_CONFIG, classOf[ByteBufferSerializer].getName)
     new KafkaProducer[String, ByteBuffer](props)
   }
-
 }
