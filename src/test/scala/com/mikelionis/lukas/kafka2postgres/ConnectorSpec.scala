@@ -75,6 +75,36 @@ class ConnectorSpec extends ConnectorSpecWrapper {
     }
   }
 
+  // TODO: is this expected behavior?
+  it should "forget non-existing users" in {
+    val (userId1, userName1, userEmail1) = ("user1", "username1", "user1@mail.com")
+    val (userId2, userName2, userEmail2) = ("user2", "username2", "user2@mail.com")
+    val userIdX = "userX"
+    val beforeCreatedMillis = System.currentTimeMillis()
+
+    withConnector {
+      kafkaProducer.send(newUserCreatedRecord(srcTopic, userId1, userName1, userEmail1))
+      kafkaProducer.send(newUserForgottenRecord(srcTopic, userIdX)) // non-existing id
+      kafkaProducer.send(newUserCreatedRecord(srcTopic, userId2, userName2, userEmail2))
+
+      eventually {
+        val users = selectUsers(usersTable)
+
+        users.size shouldBe 2
+        val user1 = users.find(_.id == userId1).get
+        val user2 = users.find(_.id == userId2).get
+        assertUser(user1, beforeCreatedMillis, checkUpdatedAt = false, userId1, userName1, userEmail1, UserStatus.Active)
+        assertUser(user2, beforeCreatedMillis, checkUpdatedAt = false, userId2, userName2, userEmail2, UserStatus.Active)
+
+        val forgottenUsers = selectForgottenUsers(forgottenUsersTable)
+        forgottenUsers.size shouldBe 1
+        val userX = forgottenUsers.find(_.id == userIdX).get
+
+        assertForgottenUser(userX, beforeCreatedMillis, userIdX)
+      }
+    }
+  }
+
   it should "not create users with existing ids or emails" in {
     val (userId1, userName1, userEmail1) = ("user1", "username1", "user1@mail.com")
     val (userId2, userName2, userEmail2) = (userId1, "username2", "user2@mail.com") // duplicate id
@@ -133,5 +163,54 @@ class ConnectorSpec extends ConnectorSpecWrapper {
     }
   }
 
-  // TODO: unsupported event type
+  it should "ignore delete/update events for non-existing users" in {
+    val (userId1, userName1, userEmail1) = ("user1", "username1", "user1@mail.com")
+    val (userId2, userName2, userEmail2) = ("user2", "username2", "user2@mail.com")
+    val beforeCreatedMillis = System.currentTimeMillis()
+
+    withConnector {
+      kafkaProducer.send(newUserCreatedRecord(srcTopic, userId1, userName1, userEmail1))
+      kafkaProducer.send(newUserEmailUpdatedRecord(srcTopic, "userX", "userX@email.com")) // non-existing id
+      kafkaProducer.send(newUserDeletedRecord(srcTopic, "userX")) // non-existing id
+      kafkaProducer.send(newUserCreatedRecord(srcTopic, userId2, userName2, userEmail2))
+
+      eventually {
+        val users = selectUsers(usersTable)
+
+        users.size shouldBe 2
+        val user1 = users.find(_.id == userId1).get
+        val user2 = users.find(_.id == userId2).get
+        assertUser(user1, beforeCreatedMillis, checkUpdatedAt = false, userId1, userName1, userEmail1, UserStatus.Active)
+        assertUser(user2, beforeCreatedMillis, checkUpdatedAt = false, userId2, userName2, userEmail2, UserStatus.Active)
+
+        selectForgottenUsers(forgottenUsersTable).size shouldBe 0
+      }
+    }
+  }
+
+  it should "ignore events with unsupported schema" in {
+    val (userId1, userName1, userEmail1) = ("user1", "username1", "user1@mail.com")
+    val (userId2, userName2, userEmail2) = ("user2", "username2", "user2@mail.com")
+    val beforeCreatedMillis = System.currentTimeMillis()
+
+    withConnector {
+      kafkaProducer.send(newUserCreatedRecord(srcTopic, userId1, userName1, userEmail1))
+      kafkaProducer.send(newUnsupportedEvent(srcTopic, "TestSchema", "test-key", "test-value".getBytes)) // unsupported
+      kafkaProducer.send(newUserCreatedRecord(srcTopic, userId2, userName2, userEmail2))
+
+      eventually {
+        val users = selectUsers(usersTable)
+
+        users.size shouldBe 2
+        val user1 = users.find(_.id == userId1).get
+        val user2 = users.find(_.id == userId2).get
+        assertUser(user1, beforeCreatedMillis, checkUpdatedAt = false, userId1, userName1, userEmail1, UserStatus.Active)
+        assertUser(user2, beforeCreatedMillis, checkUpdatedAt = false, userId2, userName2, userEmail2, UserStatus.Active)
+
+        selectForgottenUsers(forgottenUsersTable).size shouldBe 0
+      }
+    }
+  }
+
+  // TODO: add tests for unparsable events
 }

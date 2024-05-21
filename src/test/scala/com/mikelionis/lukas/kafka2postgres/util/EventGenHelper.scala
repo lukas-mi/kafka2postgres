@@ -73,4 +73,14 @@ trait EventGenHelper {
       List[Header](new RecordHeader(schemaHeaderName, classOf[UserForgotten].getSimpleName.getBytes)).asJava
     )
   }
+
+  def newUnsupportedEvent(topic: String, schema: String, key: String, content: Array[Byte]): ProducerRecord[String, ByteBuffer] = {
+    new ProducerRecord[String, ByteBuffer](
+      topic,
+      null,
+      key,
+      ByteBuffer.wrap(content),
+      List[Header](new RecordHeader(schemaHeaderName, schema.getBytes)).asJava
+    )
+  }
 }
