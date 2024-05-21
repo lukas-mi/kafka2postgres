@@ -23,6 +23,7 @@ POC service aggregating and loading user events (create, update, delete, forget)
 
 ## TODO:
 - Add more tests covering specific business cases
+- Add tests that disrupt network, stop Kafka/Postgres
 - Add monitoring
 - Package to Docker image
 - Implement retry logic
