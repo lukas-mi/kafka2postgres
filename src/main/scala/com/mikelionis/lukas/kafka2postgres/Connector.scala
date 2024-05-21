@@ -5,6 +5,7 @@ import com.mikelionis.lukas.kafka2postgres.util.{Logging, PostgresErrorCodes}
 import com.typesafe.config.Config
 import org.apache.kafka.clients.consumer.{ConsumerConfig, ConsumerRecord, KafkaConsumer}
 import org.apache.kafka.common.serialization.{ByteBufferDeserializer, StringDeserializer}
+import org.postgresql.util.PSQLException
 
 import java.nio.ByteBuffer
 import java.sql.{Connection, DriverManager, PreparedStatement, SQLException}
@@ -61,12 +62,15 @@ class Connector(config: Config) extends Logging {
         log.info(s"Running the connector...")
         while (running.get()) {
           val records = consumer.poll(Duration.ofMillis(500)).records(srcTopic).asScala.toList
-          log.info(s"Connector read ${records.size}")
 
-          val handledRecords = records.map(handleRecord(con)).count(identity)
-          log.info(s"Connector handled $handledRecords/${records.size} records")
+          if (records.nonEmpty) {
+            log.info(s"Connector read ${records.size}")
 
-          consumer.commitSync()
+            val handledRecords = records.map(handleRecord(con)).count(identity)
+            log.info(s"Connector handled $handledRecords/${records.size} records")
+
+            consumer.commitSync()
+          }
         }
 
         log.info("Kafka and Postgres connection have been closed")
@@ -118,7 +122,7 @@ class Connector(config: Config) extends Logging {
 
       try stmt.execute()
       catch {
-        case ex: SQLException if ex.getErrorCode == PostgresErrorCodes.UniqueViolation =>
+        case ex: PSQLException if ex.getSQLState == PostgresErrorCodes.UniqueViolation.toString =>
           log.warn(s"Postgres exception while inserting user (event=$event) in $usersTable", ex)
       }
     }
@@ -134,7 +138,7 @@ class Connector(config: Config) extends Logging {
         val updatedRows = stmt.executeUpdate()
         if (updatedRows == 0) log.warn(s"Attempted to update email of a non-existing user under id '${event.id}' in $usersTable")
       } catch {
-        case ex: SQLException if ex.getErrorCode == PostgresErrorCodes.UniqueViolation =>
+        case ex: PSQLException if ex.getSQLState == PostgresErrorCodes.UniqueViolation.toString =>
           log.warn(s"Postgres exception while updating user email (event=$event)", ex)
       }
     }
@@ -168,7 +172,7 @@ class Connector(config: Config) extends Logging {
       insertStmt.setString(1, event.id.toString)
       try insertStmt.executeUpdate()
       catch {
-        case ex: SQLException if ex.getErrorCode == PostgresErrorCodes.UniqueViolation =>
+        case ex: PSQLException if ex.getSQLState == PostgresErrorCodes.UniqueViolation.toString =>
           log.warn(s"Postgres exception while inserting user under id '${event.id}' in $forgottenUsersTable", ex)
       }
 
